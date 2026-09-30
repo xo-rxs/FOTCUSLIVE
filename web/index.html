@@ -1,0 +1,88 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="theme-color" content="#10221c" />
+    <title>포커스라이브 — 경기 속 한 사람을 따라보다</title>
+    <link rel="icon" href="/static/favicon.svg" type="image/svg+xml" />
+    <link rel="stylesheet" href="/static/style.css" />
+    <script src="/static/app.js" defer></script>
+  </head>
+  <body>
+    <div class="shell">
+      <header class="topbar">
+        <a class="brand" href="/" aria-label="포커스라이브 첫 화면">
+          <span class="brand-mark" aria-hidden="true"><span></span></span>
+          <span>포커스라이브</span>
+        </a>
+        <span class="topbar-note">축구 경기 선수 따라보기</span>
+      </header>
+
+      <main>
+        <section class="hero" aria-labelledby="hero-title">
+          <div class="hero-copy">
+            <p class="eyebrow">내가 보고 싶은 선수, 경기의 중심으로</p>
+            <h1 id="hero-title">경기 전체를 담고,<br /><em>한 선수에게 집중하세요.</em></h1>
+            <p class="hero-description">두 휴대폰으로 경기를 촬영하고, 저장된 영상에서 선수를 선택하세요. 움직임을 따라가는 확대 화면으로 다시 볼 수 있습니다.</p>
+            <div class="hero-tags" aria-label="이용 순서">
+              <span>① 촬영방 연결</span><span>② 경기 영상 등록</span><span>③ 선수 따라보기</span>
+            </div>
+          </div>
+          <div class="field-illustration" aria-hidden="true">
+            <div class="field-lines"><span class="field-center"></span><span class="field-ring"></span><span class="field-box field-box-left"></span><span class="field-box field-box-right"></span></div>
+            <span class="field-player field-player-one"></span>
+            <span class="field-player field-player-two"></span>
+            <span class="field-player field-player-three"></span>
+            <span class="field-target"><span></span></span>
+            <div class="field-label">선택한 선수 따라보기</div>
+          </div>
+        </section>
+
+        <section class="panel" id="connect-panel" aria-labelledby="connect-title">
+          <div class="section-heading"><span class="section-number">01</span><div><p class="section-kicker">첫 번째 단계</p><h2 id="connect-title">두 휴대폰 연결하기</h2></div></div>
+          <p class="section-description">한 휴대폰에서 촬영방을 만들고, 다른 휴대폰에서 같은 코드를 입력하세요. 두 기기는 같은 와이파이에 연결해 주세요.</p>
+          <div class="connect-grid">
+            <div class="connect-card">
+              <span class="connect-card-icon" aria-hidden="true">＋</span>
+              <h3>첫 번째 휴대폰</h3>
+              <p>새 촬영방을 만들고 화면에 나온 코드를 다른 휴대폰에 알려 주세요.</p>
+              <button class="button button-primary" id="create-room" type="button">새 촬영방 만들기</button>
+            </div>
+            <form class="connect-card" id="join-form">
+              <span class="connect-card-icon" aria-hidden="true">↗</span>
+              <h3>두 번째 휴대폰</h3>
+              <p>첫 번째 휴대폰의 여섯 자리 코드를 입력해 같은 촬영방에 들어가세요.</p>
+              <label for="room-code">촬영방 코드</label>
+              <div class="join-row"><input id="room-code" name="room-code" type="text" inputmode="text" maxlength="6" autocomplete="off" placeholder="여섯 자리 코드" required /><button class="button button-secondary" type="submit">참여하기</button></div>
+            </form>
+          </div>
+        </section>
+
+        <section class="panel" id="room-panel" aria-labelledby="room-title" hidden>
+          <div class="section-heading"><span class="section-number">02</span><div><p class="section-kicker">두 번째 단계</p><h2 id="room-title">경기 영상 등록하기</h2></div></div>
+          <div class="room-info"><div><span class="muted-label">현재 촬영방</span><strong id="active-code">------</strong></div><button class="button button-small" id="copy-code" type="button">코드 복사</button><button class="button button-small" id="leave-room" type="button">다른 촬영방</button><span class="your-device" id="your-device">이 휴대폰: —</span></div>
+          <p class="section-description">두 휴대폰에서 각각 아래 버튼을 눌러 촬영하세요. 휴대폰에 따라 카메라 화면이나 영상 선택 화면이 열립니다. 촬영을 마친 뒤 영상을 등록하면 분석이 시작됩니다.</p>
+          <div class="device-grid" id="device-grid" aria-live="polite"></div>
+          <div class="upload-bar"><div><strong>이 휴대폰의 영상</strong><p id="upload-hint">지금 촬영하거나 저장된 영상을 고르세요. 최대 500메가바이트까지 등록할 수 있습니다.</p></div><div class="upload-actions"><label class="button button-primary upload-button" for="capture-file">지금 촬영</label><label class="button button-secondary upload-button" for="saved-file">저장된 영상 선택</label></div><input id="capture-file" type="file" accept="video/*" capture="environment" /><input id="saved-file" type="file" accept="video/mp4,video/quicktime,video/x-m4v,video/webm,video/3gpp,.mp4,.mov,.m4v,.webm,.3gp" /></div>
+        </section>
+
+        <section class="panel" id="library-panel" aria-labelledby="library-title" hidden>
+          <div class="section-heading"><span class="section-number">03</span><div><p class="section-kicker">세 번째 단계</p><h2 id="library-title">선수 따라보기</h2></div></div>
+          <p class="section-description">분석을 마친 영상을 고른 뒤 원본 화면에서 선수를 누르세요. 추적이 끊기면 전체 화면으로 돌아가며, 선수를 다시 고를 수 있습니다.</p>
+          <div class="video-list" id="video-list"></div>
+          <div class="viewer" id="viewer" hidden>
+            <div class="viewer-grid">
+              <div class="viewer-card"><div class="viewer-heading"><h3>전체 경기 화면</h3><span>선수를 눌러 선택</span></div><div class="video-wrap"><video id="original-video" playsinline preload="auto"></video><canvas id="selection-canvas" aria-label="화면 속 선수를 선택하는 영역"></canvas></div><div class="video-controls"><button id="toggle-play" type="button">재생</button><input id="seek-range" type="range" min="0" max="1000" value="0" aria-label="영상 재생 위치" /><span id="play-time">0:00 / 0:00</span><button id="toggle-mute" type="button">소리 끄기</button></div></div>
+              <div class="viewer-card"><div class="viewer-heading"><h3>선수 따라보기</h3><span id="focus-label">선수를 선택해 주세요</span></div><div class="focus-wrap"><canvas id="focus-canvas" aria-label="선택한 선수를 따라가는 확대 화면"></canvas><div class="focus-empty" id="focus-empty">원본 화면에서 선수를 선택해 주세요.</div></div></div>
+            </div>
+            <p class="viewer-notice" id="viewer-notice" role="status">원본 영상에서 선수의 표시를 누르면 따라보기가 시작됩니다.</p>
+          </div>
+        </section>
+      </main>
+
+      <footer class="footer"><span>포커스라이브 · 첫 번째 버전</span><span>영상은 이 컴퓨터에 저장됩니다.</span></footer>
+    </div>
+    <div class="toast" id="toast" role="status" aria-live="polite" hidden></div>
+  </body>
+</html>
