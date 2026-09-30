@@ -1,0 +1,349 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>포커스라이브 소개</title>
+<link rel="icon" href="../web/favicon.svg" />
+<style>
+  :root {
+    --ink: #133b2b;
+    --green: #17683e;
+    --green-soft: #2f7a4f;
+    --lime: #c8f182;
+    --bg: #f4f6f1;
+    --card: #ffffff;
+    --muted: #5f776b;
+    --line: #dfe7df;
+    --dark: #0d2b1f;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { height: 100%; }
+  body {
+    background: #0b1a13;
+    color: var(--ink);
+    font-family: "Apple SD Gothic Neo", "Malgun Gothic", "Noto Sans KR", sans-serif;
+    overflow: hidden;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  /* 1280×720 고정 캔버스를 창 크기에 맞춰 확대·축소한다 */
+  .stage { position: fixed; inset: 0; display: grid; place-items: center; }
+  .deck { width: 1280px; height: 720px; position: relative; transform-origin: center; }
+  .slide {
+    position: absolute; inset: 0;
+    background: var(--bg);
+    padding: 72px 88px;
+    display: flex; flex-direction: column;
+    opacity: 0; visibility: hidden;
+    transition: opacity .35s ease;
+    border-radius: 6px;
+    overflow: hidden;
+  }
+  .slide.active { opacity: 1; visibility: visible; }
+
+  .eyebrow { font-size: 15px; font-weight: 800; color: var(--green); letter-spacing: .02em; margin-bottom: 14px; }
+  h1 { font-size: 64px; line-height: 1.12; letter-spacing: -.05em; font-weight: 850; }
+  h2 { font-size: 50px; line-height: 1.2; letter-spacing: -.045em; font-weight: 850; margin-bottom: 36px; }
+  h3 { font-size: 27px; letter-spacing: -.035em; font-weight: 800; margin-bottom: 14px; }
+  p, li { font-size: 22px; line-height: 1.6; color: var(--muted); }
+  .accent { color: var(--green-soft); }
+  .foot { position: absolute; left: 88px; right: 88px; bottom: 32px; display: flex; justify-content: space-between; font-size: 13px; font-weight: 700; color: #8aa095; }
+  .brand { display: inline-flex; align-items: center; gap: 10px; font-weight: 850; letter-spacing: -.04em; }
+  .brand svg { width: 22px; height: 22px; }
+
+  .grid { display: grid; gap: 24px; }
+  /* 제목 아래 남은 공간의 가운데에 내용을 둔다 */
+  .grid, .flow, .scope, .stack { margin: auto 0 44px; }
+  .g2 { grid-template-columns: 1fr 1fr; }
+  .g3 { grid-template-columns: repeat(3, 1fr); }
+  .g3 h3 { font-size: 25px; }
+  .card { background: var(--card); border: 1px solid var(--line); border-radius: 22px; padding: 36px; }
+  .num { display: inline-grid; place-items: center; width: 42px; height: 42px; border-radius: 12px; background: #e6f0e4; color: var(--green); font-weight: 850; font-size: 16px; margin-bottom: 18px; }
+  ul.clean { list-style: none; display: grid; gap: 14px; }
+  ul.clean li { padding-left: 22px; position: relative; }
+  ul.clean li::before { content: ""; position: absolute; left: 0; top: 14px; width: 8px; height: 8px; border-radius: 50%; background: var(--green-soft); }
+
+  /* 표지 */
+  .cover { background: var(--dark); color: #fff; justify-content: center; }
+  .cover h1 { color: #fff; }
+  .cover h1 .accent { color: var(--lime); }
+  .cover p { color: #b9cabe; font-size: 21px; margin-top: 26px; max-width: 620px; }
+  .cover .eyebrow { color: var(--lime); }
+  .cover .foot { color: #6f8b7c; }
+  .pitch {
+    position: absolute; right: 70px; top: 150px; width: 430px; height: 290px;
+    background: repeating-linear-gradient(90deg, #2e7045 0 43px, #347a4b 43px 86px);
+    border: 8px solid #1f4f35; border-radius: 22px; transform: rotate(-2deg);
+    box-shadow: 0 30px 60px rgba(0,0,0,.35);
+  }
+  .pitch::before { content: ""; position: absolute; inset: 16px; border: 2px solid rgba(255,255,255,.55); border-radius: 4px; }
+  .pitch .mid { position: absolute; left: 50%; top: 16px; bottom: 16px; border-left: 2px solid rgba(255,255,255,.55); }
+  .pitch .circle { position: absolute; left: 50%; top: 50%; width: 80px; height: 80px; margin: -40px; border: 2px solid rgba(255,255,255,.55); border-radius: 50%; }
+  .pitch .dot { position: absolute; width: 14px; height: 14px; border-radius: 50%; background: #f1f4ec; }
+  .pitch .focus { width: 22px; height: 22px; background: var(--lime); box-shadow: 0 0 0 10px rgba(200,241,130,.25), 0 0 0 22px rgba(200,241,130,.12); }
+  .pitch .tag { position: absolute; right: 18px; bottom: 18px; background: #10271c; color: var(--lime); font-size: 13px; font-weight: 800; padding: 7px 12px; border-radius: 8px; }
+
+  /* 흐름 */
+  .flow { display: grid; grid-template-columns: repeat(4, 1fr); gap: 18px; }
+  .flow .card { padding: 30px 26px; }
+  .flow p { font-size: 20px; }
+  .flow .card { position: relative; }
+  .flow .card:not(:last-child)::after { content: "→"; position: absolute; right: -15px; top: 50%; transform: translateY(-50%); color: var(--green-soft); font-weight: 900; font-size: 20px; }
+  .flow .card.warn { background: #fbfcf4; border-style: dashed; }
+
+  /* 화면 캡처 */
+  .shots { display: grid; grid-template-columns: 0.72fr 1.28fr; gap: 26px; flex: 1; min-height: 0; margin-bottom: 44px; }
+  .shots.single { grid-template-columns: 1fr; }
+  .shots.single .frame { background: #0f2a1d; }
+  .shots.single img { object-fit: contain; }
+  figure { display: flex; flex-direction: column; min-height: 0; }
+  figure .frame { flex: 1; min-height: 0; border-radius: 14px; overflow: hidden; border: 1px solid var(--line); background: #fff; box-shadow: 0 14px 30px rgba(19,59,43,.08); }
+  figure img { width: 100%; height: 100%; object-fit: cover; object-position: top center; display: block; }
+  figcaption { font-size: 19px; font-weight: 700; color: var(--ink); margin-top: 12px; }
+  figcaption span { color: var(--muted); font-weight: 500; }
+  .note { font-size: 13px; color: #8aa095; margin-top: 14px; }
+
+  /* 기술 */
+  .stack { display: grid; grid-template-columns: repeat(3, 1fr); gap: 18px; }
+  .stack .card { padding: 34px; }
+  .pill { display: inline-block; font-size: 13px; font-weight: 800; color: var(--green); background: #e6f0e4; border-radius: 99px; padding: 5px 11px; margin-bottom: 14px; }
+
+  .scope { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; }
+  .scope .card.out { background: transparent; border-style: dashed; }
+
+  .closing { background: var(--dark); justify-content: center; align-items: flex-start; }
+  .closing h1 { color: #fff; }
+  .closing h1 .accent { color: var(--lime); }
+  .closing p { color: #b9cabe; margin-top: 22px; }
+  .closing .foot { color: #6f8b7c; }
+
+  /* 조작 */
+  .nav { position: fixed; bottom: 18px; left: 50%; transform: translateX(-50%); display: flex; align-items: center; gap: 12px; background: rgba(16,39,28,.85); color: #dfe9e1; padding: 8px 12px; border-radius: 99px; font-size: 13px; font-weight: 700; z-index: 5; }
+  .nav button { background: none; border: 0; color: inherit; font: inherit; font-size: 16px; width: 30px; height: 30px; border-radius: 50%; cursor: pointer; }
+  .nav button:hover { background: rgba(255,255,255,.12); }
+  .progress { position: fixed; left: 0; top: 0; height: 3px; background: var(--lime); transition: width .3s ease; z-index: 5; }
+
+  @media print {
+    @page { size: 1280px 720px; margin: 0; }
+    body { background: none; overflow: visible; }
+    .stage { position: static; display: block; }
+    .deck { transform: none !important; width: auto; height: auto; }
+    .slide { position: relative; width: 1280px; height: 720px; opacity: 1; visibility: visible; border-radius: 0; page-break-after: always; break-after: page; }
+    .nav, .progress { display: none; }
+  }
+</style>
+</head>
+<body>
+<div class="progress" id="progress"></div>
+<div class="stage">
+<div class="deck" id="deck">
+
+  <!-- 1. 표지 -->
+  <section class="slide cover">
+    <div class="eyebrow">FOTCUSLIVE · 첫 번째 버전 소개</div>
+    <h1>경기 전체를 담고,<br><span class="accent">한 선수에게 집중하세요.</span></h1>
+    <p>휴대폰 두 대로 축구 경기를 찍고, 보고 싶은 선수를 고르면 확대 화면이 그 선수를 따라갑니다.</p>
+    <div class="pitch">
+      <div class="mid"></div><div class="circle"></div>
+      <div class="dot" style="left:92px;top:60px"></div>
+      <div class="dot" style="left:190px;top:150px"></div>
+      <div class="dot" style="left:320px;top:84px"></div>
+      <div class="dot focus" style="left:250px;top:96px"></div>
+      <div class="tag">선택한 선수 따라보기</div>
+    </div>
+    <div class="foot"><span class="brand"><svg viewBox="0 0 64 64"><circle cx="32" cy="32" r="28" fill="#17683e"/><circle cx="32" cy="32" r="16" fill="#f4f6f1"/><circle cx="32" cy="32" r="8" fill="#c8f182"/></svg>포커스라이브</span><span>1 / 10</span></div>
+  </section>
+
+  <!-- 2. 문제 -->
+  <section class="slide">
+    <div class="eyebrow">왜 필요한가</div>
+    <h2>경기 영상 속 <span class="accent">내 플레이</span>는 늘 작고, 쉽게 놓칩니다.</h2>
+    <div class="grid g3">
+      <div class="card"><div class="num">01</div><h3>누군가 계속 확대해야 한다</h3><p>일반적인 경기 촬영은 사람이 카메라를 들고 원하는 선수를 따라 확대·이동해야 합니다.</p></div>
+      <div class="card"><div class="num">02</div><h3>전체 화면에선 선수가 작다</h3><p>경기장을 넓게 찍으면 한 선수의 움직임이 작게 보여 다시 보기 어렵습니다.</p></div>
+      <div class="card"><div class="num">03</div><h3>좋은 장면을 놓친다</h3><p>촬영자가 공만 따라가면 공 없는 곳에서의 움직임과 멋진 플레이가 화면 밖으로 빠집니다.</p></div>
+    </div>
+    <div class="foot"><span class="brand">포커스라이브</span><span>2 / 10</span></div>
+  </section>
+
+  <!-- 3. 사용자와 해결 -->
+  <section class="slide">
+    <div class="eyebrow">누구를 위한 앱인가</div>
+    <h2>찍는 건 넓게, 보는 건 <span class="accent">한 선수만</span>.</h2>
+    <div class="grid g2">
+      <div class="card">
+        <h3>이런 사람을 위해</h3>
+        <ul class="clean">
+          <li>내가 뛴 경기에서 나의 플레이를 녹화해 따라가며 돌려보고 싶은 사람</li>
+          <li>좋아하는 선수만 따라가며 가까이 보고 싶은 사람</li>
+        </ul>
+      </div>
+      <div class="card" style="background:#10271c;border-color:#10271c">
+        <h3 style="color:#fff">포커스라이브가 하는 일</h3>
+        <ul class="clean">
+          <li style="color:#c9d8cd">휴대폰 두 대가 각자 경기 전체를 촬영합니다.</li>
+          <li style="color:#c9d8cd">AI가 영상 속 사람을 찾아 움직임을 추적합니다.</li>
+          <li style="color:#c9d8cd">선수를 고르면 확대 화면이 그 선수를 따라 이동합니다.</li>
+        </ul>
+      </div>
+    </div>
+    <div class="foot"><span class="brand">포커스라이브</span><span>3 / 10</span></div>
+  </section>
+
+  <!-- 4. 사용 흐름 -->
+  <section class="slide">
+    <div class="eyebrow">사용 흐름</div>
+    <h2>연결하고, 찍고, 고르면 끝.</h2>
+    <div class="flow">
+      <div class="card"><div class="num">1</div><h3>두 휴대폰 연결</h3><p>한 휴대폰에서 촬영방을 만들고, 다른 휴대폰이 여섯 자리 코드로 참여합니다.</p></div>
+      <div class="card"><div class="num">2</div><h3>촬영·등록</h3><p>각 휴대폰에서 경기를 찍거나 저장된 영상을 올리면 분석이 시작됩니다.</p></div>
+      <div class="card"><div class="num">3</div><h3>선수 선택</h3><p>분석이 끝난 영상을 열고 원본 화면에서 선수 표시를 누릅니다.</p></div>
+      <div class="card warn"><div class="num">4</div><h3>따라보기</h3><p>확대 화면이 선수를 따라갑니다. 추적이 끊기면 전체 화면으로 돌아가 다시 고르도록 안내합니다.</p></div>
+    </div>
+    <div class="foot"><span class="brand">포커스라이브</span><span>4 / 10</span></div>
+  </section>
+
+  <!-- 5. 화면: 연결·등록 -->
+  <section class="slide">
+    <div class="eyebrow">실제 화면 ①</div>
+    <h2 style="margin-bottom:26px">촬영방으로 두 휴대폰을 묶습니다.</h2>
+    <div class="shots">
+      <figure><div class="frame"><img src="images/slide-connect.jpg" alt="두 휴대폰 연결 화면" style="object-fit:contain;background:#f4f6f1"></div><figcaption>두 휴대폰 연결 <span>— 방 만들기 또는 코드로 참여</span></figcaption></figure>
+      <figure><div class="frame"><img src="images/slide-room.jpg" alt="경기 영상 등록 화면" style="object-fit:contain;background:#fff"></div><figcaption>영상 등록 <span>— 두 기기의 영상 상태를 한눈에</span></figcaption></figure>
+    </div>
+    <div class="foot"><span class="brand">포커스라이브</span><span>5 / 10</span></div>
+  </section>
+
+  <!-- 6. 화면: 선택·따라보기 -->
+  <section class="slide">
+    <div class="eyebrow">실제 화면 ②</div>
+    <h2 style="margin-bottom:26px">누르면, 그 선수만 크게 따라갑니다.</h2>
+    <div class="shots single">
+      <figure><div class="frame"><img src="images/slide-follow.jpg" alt="왼쪽 원본 화면에서 선수 3을 선택하자 오른쪽 확대 화면이 그 선수를 따라가는 모습"></div><figcaption>왼쪽 원본 화면에서 선수 3을 누르면 <span>— 오른쪽 확대 화면이 그 선수를 따라 이동합니다.</span></figcaption></figure>
+    </div>
+    <p class="note" style="margin-top:-30px;margin-bottom:24px">화면 캡처는 동작 확인용 짧은 샘플 영상으로 만들었으며 실제 축구 경기 장면이 아닙니다.</p>
+    <div class="foot"><span class="brand">포커스라이브</span><span>6 / 10</span></div>
+  </section>
+
+  <!-- 7. 기술 구성 -->
+  <section class="slide">
+    <div class="eyebrow">어떻게 동작하나</div>
+    <h2>휴대폰은 브라우저만, 분석은 컴퓨터 한 대에서.</h2>
+    <div class="stack">
+      <div class="card"><span class="pill">휴대폰</span><h3>설치 없는 웹 앱</h3><p>휴대폰 브라우저로 접속해 기본 카메라로 촬영하거나 저장된 영상을 올립니다. MP4·MOV·M4V·WEBM, 최대 500MB.</p></div>
+      <div class="card"><span class="pill">서버</span><h3>FastAPI + ffmpeg</h3><p>같은 와이파이의 컴퓨터가 촬영방, 기기 연결 상태, 영상 저장과 변환을 맡습니다.</p></div>
+      <div class="card"><span class="pill">AI 추적</span><h3>YOLO11 + ByteTrack</h3><p>초당 약 4프레임을 분석해 사람을 찾고 추적 번호를 붙입니다. 재생 화면은 이 위치를 따라 확대합니다.</p></div>
+    </div>
+    <div class="foot"><span class="brand">포커스라이브</span><span>7 / 10</span></div>
+  </section>
+
+  <!-- 8. 첫 버전 범위 -->
+  <section class="slide">
+    <div class="eyebrow">첫 버전 범위</div>
+    <h2>지금 되는 것과, 일부러 뺀 것.</h2>
+    <div class="scope">
+      <div class="card">
+        <h3>첫 버전에 포함</h3>
+        <ul class="clean">
+          <li>두 휴대폰 연결 상태 확인과 각자 촬영·저장</li>
+          <li>저장된 영상에서 선수 한 명 선택</li>
+          <li>재생 중 확대 화면이 선택한 선수를 따라 이동</li>
+          <li>추적이 끊기면 전체 화면 복귀와 재선택 안내</li>
+        </ul>
+      </div>
+      <div class="card out">
+        <h3>이번에는 만들지 않음</h3>
+        <ul class="clean">
+          <li>실시간 송출</li>
+          <li>두 영상의 자동 결합</li>
+          <li>골 장면 스크랩, 하이라이트 자동 추출</li>
+          <li>히트맵, 선수 활동 기록</li>
+        </ul>
+      </div>
+    </div>
+    <div class="foot"><span class="brand">포커스라이브</span><span>8 / 10</span></div>
+  </section>
+
+  <!-- 9. 한계와 다음 단계 -->
+  <section class="slide">
+    <div class="eyebrow">알려진 한계와 다음 단계</div>
+    <h2>솔직한 현재 상태.</h2>
+    <div class="grid g2">
+      <div class="card">
+        <h3>현재 한계</h3>
+        <ul class="clean">
+          <li>일반 사람 검출이라 심판·관중도 후보로 나올 수 있음</li>
+          <li>가림이나 화면 전환 뒤 같은 선수의 추적 번호가 바뀔 수 있음</li>
+          <li>CPU 분석이라 긴 영상은 오래 걸림</li>
+          <li>방 코드만으로 접근하므로 신뢰할 수 있는 네트워크에서 사용</li>
+        </ul>
+      </div>
+      <div class="card">
+        <h3>다음 버전 후보</h3>
+        <ul class="clean">
+          <li>골 장면 스크랩과 하이라이트 자동 추출</li>
+          <li>선수별 히트맵과 활동 기록</li>
+          <li>선수 구분 정확도 개선(유니폼·번호 활용)</li>
+          <li>접근 제어를 갖춘 외부 공유</li>
+        </ul>
+      </div>
+    </div>
+    <div class="foot"><span class="brand">포커스라이브</span><span>9 / 10</span></div>
+  </section>
+
+  <!-- 10. 마무리 -->
+  <section class="slide closing">
+    <div class="eyebrow" style="color:var(--lime)">포커스라이브</div>
+    <h1>이제 카메라는 넓게,<br><span class="accent">시선은 한 선수에게.</span></h1>
+    <p>두 휴대폰으로 찍고, 보고 싶은 선수를 누르세요. 나머지는 AI가 따라갑니다.</p>
+    <div class="foot"><span>FOTCUSLIVE · 첫 번째 버전</span><span>10 / 10</span></div>
+  </section>
+
+</div>
+</div>
+
+<div class="nav">
+  <button id="prev" aria-label="이전 슬라이드">‹</button>
+  <span id="counter">1 / 10</span>
+  <button id="next" aria-label="다음 슬라이드">›</button>
+</div>
+
+<script>
+  const slides = [...document.querySelectorAll(".slide")];
+  const deck = document.getElementById("deck");
+  let index = 0;
+
+  function fit() {
+    const scale = Math.min(window.innerWidth / 1280, window.innerHeight / 720);
+    deck.style.transform = `scale(${scale})`;
+  }
+
+  function show(next) {
+    index = Math.max(0, Math.min(slides.length - 1, next));
+    slides.forEach((slide, i) => slide.classList.toggle("active", i === index));
+    document.getElementById("counter").textContent = `${index + 1} / ${slides.length}`;
+    document.getElementById("progress").style.width = `${((index + 1) / slides.length) * 100}%`;
+    history.replaceState(null, "", `#${index + 1}`);
+  }
+
+  document.addEventListener("keydown", (event) => {
+    if (["ArrowRight", "PageDown", " ", "Enter"].includes(event.key)) { event.preventDefault(); show(index + 1); }
+    if (["ArrowLeft", "PageUp", "Backspace"].includes(event.key)) { event.preventDefault(); show(index - 1); }
+    if (event.key === "Home") show(0);
+    if (event.key === "End") show(slides.length - 1);
+    if (event.key === "f") document.documentElement.requestFullscreen?.();
+  });
+  document.getElementById("prev").addEventListener("click", () => show(index - 1));
+  document.getElementById("next").addEventListener("click", () => show(index + 1));
+  document.querySelector(".stage").addEventListener("click", (event) => {
+    if (event.target.closest(".nav")) return;
+    show(event.clientX > window.innerWidth / 2 ? index + 1 : index - 1);
+  });
+
+  window.addEventListener("resize", fit);
+  fit();
+  show((parseInt(location.hash.slice(1), 10) || 1) - 1);
+</script>
+</body>
+</html>
