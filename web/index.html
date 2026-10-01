@@ -8,6 +8,7 @@
     <link rel="icon" href="/static/favicon.svg" type="image/svg+xml" />
     <link rel="stylesheet" href="/static/style.css" />
     <script src="/static/app.js" defer></script>
+    <script src="/static/live-broadcast.js" defer></script>
   </head>
   <body>
     <div class="shell">
@@ -16,6 +17,7 @@
           <span class="brand-mark" aria-hidden="true"><span></span></span>
           <span>포커스라이브</span>
         </a>
+        <a class="button button-secondary" href="/live">라이브 방 보기</a>
         <span class="topbar-note">축구 경기 선수 따라보기</span>
       </header>
 
@@ -52,9 +54,10 @@
             <form class="connect-card" id="join-form">
               <span class="connect-card-icon" aria-hidden="true">↗</span>
               <h3>두 번째 휴대폰</h3>
-              <p>첫 번째 휴대폰의 여섯 자리 코드를 입력해 같은 촬영방에 들어가세요.</p>
+              <p>촬영방 코드를 입력한 뒤 표시되는 확인번호를 첫 번째 휴대폰에 알려 주세요.</p>
               <label for="room-code">촬영방 코드</label>
               <div class="join-row"><input id="room-code" name="room-code" type="text" inputmode="text" maxlength="6" autocomplete="off" placeholder="여섯 자리 코드" required /><button class="button button-secondary" type="submit">참여하기</button></div>
+              <p id="join-waiting" class="join-message" role="status" hidden></p>
             </form>
           </div>
         </section>
@@ -62,8 +65,19 @@
         <section class="panel" id="room-panel" aria-labelledby="room-title" hidden>
           <div class="section-heading"><span class="section-number">02</span><div><p class="section-kicker">두 번째 단계</p><h2 id="room-title">경기 영상 등록하기</h2></div></div>
           <div class="room-info"><div><span class="muted-label">현재 촬영방</span><strong id="active-code">------</strong></div><button class="button button-small" id="copy-code" type="button">코드 복사</button><button class="button button-small" id="leave-room" type="button">다른 촬영방</button><span class="your-device" id="your-device">이 휴대폰: —</span></div>
+          <form id="join-approval" class="join-approval" hidden>
+            <label for="verification-code">두 번째 휴대폰에 표시된 확인번호</label>
+            <div class="join-row"><input id="verification-code" type="text" inputmode="numeric" pattern="[0-9]{6}" maxlength="6" autocomplete="off" placeholder="확인번호 6자리" required /><button class="button button-secondary" type="submit">기기 연결 승인</button></div>
+          </form>
           <p class="section-description">두 휴대폰에서 각각 아래 버튼을 눌러 촬영하세요. 휴대폰에 따라 카메라 화면이나 영상 선택 화면이 열립니다. 촬영을 마친 뒤 영상을 등록하면 분석이 시작됩니다.</p>
           <div class="device-grid" id="device-grid" aria-live="polite"></div>
+          <div class="live-broadcast">
+            <div><h3>경기 라이브</h3><p>이 기기의 카메라 영상을 시청자에게 실시간으로 보냅니다. 한 방에서 한 기기만 송출할 수 있습니다.</p></div>
+            <button class="button button-primary" id="start-live" type="button">라이브 시작</button>
+            <button class="button button-secondary" id="stop-live" type="button" hidden>라이브 종료</button>
+            <span id="live-broadcast-status" role="status">라이브 대기 중</span>
+            <video id="live-preview" autoplay muted playsinline hidden></video>
+          </div>
           <div class="upload-bar"><div><strong>이 휴대폰의 영상</strong><p id="upload-hint">지금 촬영하거나 저장된 영상을 고르세요. 최대 500메가바이트까지 등록할 수 있습니다.</p></div><div class="upload-actions"><label class="button button-primary upload-button" for="capture-file">지금 촬영</label><label class="button button-secondary upload-button" for="saved-file">저장된 영상 선택</label></div><input id="capture-file" type="file" accept="video/*" capture="environment" /><input id="saved-file" type="file" accept="video/mp4,video/quicktime,video/x-m4v,video/webm,video/3gpp,.mp4,.mov,.m4v,.webm,.3gp" /></div>
         </section>
 

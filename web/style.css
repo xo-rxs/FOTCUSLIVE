@@ -60,6 +60,16 @@ button { cursor: pointer; }
 .button-secondary { color: #17583a; background: #eef7ee; }
 .button-small { min-height: 34px; padding: 0 11px; font-size: 12px; }
 .join-row { display: flex; gap: 8px; }.join-row input { min-width: 0; width: 100%; padding: 0 12px; border: 1px solid #d5dfd4; border-radius: 9px; background: #fff; text-transform: uppercase; letter-spacing: .1em; }
+.join-message { margin: 12px 0 0 !important; min-height: 0 !important; font-weight: 700; color: #155739 !important; }
+.join-approval { max-width: 460px; margin-top: 16px; padding: 16px; border: 1px solid #c8dfca; border-radius: 12px; background: #f4faf4; }
+.join-approval label { display: block; margin-bottom: 8px; font-size: 13px; font-weight: 700; color: #155739; }
+.join-approval input { height: 40px; }
+.live-broadcast { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin-top: 18px; padding: 18px; border: 1px solid #c8dfca; border-radius: 12px; background: #f4faf4; }
+.live-broadcast > div { flex: 1 1 100%; }.live-broadcast h3 { margin: 0 0 5px; }.live-broadcast p { margin: 0; color: #64766b; font-size: 13px; }
+.live-broadcast video { display: block; width: min(100%, 480px); max-height: 270px; border-radius: 10px; background: #10221c; }
+.live-room-list { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 20px; }
+.live-player-panel { margin-top: 24px; }.live-player-panel h2 { font-size: 20px; }.live-player-panel video { display: block; width: min(100%, 960px); aspect-ratio: 16 / 9; background: #10221c; border-radius: 12px; }.live-player-panel p { color: #35664b; }
+.live-broadcast [hidden], .live-player-panel[hidden], .live-player-panel [hidden] { display: none !important; }
 
 .room-info { display: flex; align-items: center; gap: 15px; flex-wrap: wrap; padding: 17px 20px; margin-top: 24px; border-radius: 12px; background: #edf6ed; }
 .room-info > div { display: flex; align-items: center; gap: 12px; }.muted-label { color: #687b6f; font-size: 12px; font-weight: 700; }.room-info strong { color: #155739; font-size: 23px; letter-spacing: .13em; }.your-device { margin-left: auto; color: #35664b; font-size: 13px; font-weight: 700; }

@@ -4,6 +4,8 @@ const STORAGE_KEY = "포커스라이브_촬영방";
 const createButton = $("#create-room");
 const joinForm = $("#join-form");
 const joinInput = $("#room-code");
+const joinWaiting = $("#join-waiting");
+const joinApproval = $("#join-approval");
 const connectPanel = $("#connect-panel");
 const roomPanel = $("#room-panel");
 const libraryPanel = $("#library-panel");
@@ -24,6 +26,7 @@ const muteButton = $("#toggle-mute");
 const seekRange = $("#seek-range");
 
 let session = null;
+let pendingJoin = null;
 let room = null;
 let tracks = null;
 let currentSlot = null;
@@ -70,14 +73,21 @@ function setSession(next) {
   libraryPanel.hidden = false;
   $("#active-code").textContent = next.code;
   $("#your-device").textContent = `이 휴대폰: ${next.slot}번 촬영 기기`;
+  joinApproval.hidden = next.slot !== 1;
+  pendingJoin = null;
+  joinWaiting.hidden = true;
 }
 
 function clearSession() {
+  window.dispatchEvent(new Event("room-session-cleared"));
   session = null;
   room = null;
+  pendingJoin = null;
   localStorage.removeItem(STORAGE_KEY);
   connectPanel.hidden = false;
   roomPanel.hidden = true;
+  joinApproval.hidden = true;
+  joinWaiting.hidden = true;
   libraryPanel.hidden = true;
   viewer.hidden = true;
   video.pause();
@@ -111,9 +121,57 @@ joinForm.addEventListener("submit", async (event) => {
     const next = await requestJson(`/api/rooms/${code}/join`, {
       method: "POST", headers: { "Content-Type": "application/json" }, body: "{}",
     });
-    setSession(next);
+    pendingJoin = next;
+    joinWaiting.textContent = `확인번호 ${next.verification_code}를 첫 번째 휴대폰에 알려 주세요. 첫 번째 휴대폰에서 승인하면 연결됩니다.`;
+    joinWaiting.hidden = false;
+    await checkPendingJoin();
+  } catch (error) {
+    showToast(error.message);
+  } finally {
+    submit.disabled = false;
+  }
+});
+
+async function checkPendingJoin() {
+  if (!pendingJoin) return;
+  const current = pendingJoin;
+  try {
+    const result = await requestJson(`/api/rooms/${current.code}/join/status`, {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ request_token: current.request_token }),
+    });
+    if (pendingJoin !== current || !result.token) return;
+    setSession(result);
     await refreshRoom();
     showToast("촬영방에 연결되었습니다.");
+  } catch (error) {
+    if (pendingJoin !== current) return;
+    pendingJoin = null;
+    joinWaiting.hidden = true;
+    showToast(error.message);
+  }
+}
+
+joinApproval.addEventListener("submit", async (event) => {
+  event.preventDefault();
+  if (!session || session.slot !== 1) return;
+  const input = $("#verification-code");
+  const code = input.value.trim();
+  if (!/^[0-9]{6}$/.test(code)) {
+    showToast("두 번째 휴대폰의 확인번호 여섯 자리를 입력해 주세요.");
+    return;
+  }
+  const submit = joinApproval.querySelector("button");
+  submit.disabled = true;
+  try {
+    await requestJson(`/api/rooms/${session.code}/join/approve`, {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ token: session.token, verification_code: code }),
+    });
+    input.value = "";
+    joinApproval.hidden = true;
+    await refreshRoom();
+    showToast("두 번째 휴대폰이 연결되었습니다.");
   } catch (error) {
     showToast(error.message);
   } finally {
@@ -239,6 +297,7 @@ async function refreshRoom() {
   if (!session) return;
   try {
     room = await requestJson(`/api/rooms/${session.code}`);
+    joinApproval.hidden = session.slot !== 1 || room.devices[1].joined;
     renderDevices();
     renderVideos();
   } catch (error) {
@@ -503,5 +562,5 @@ if (session?.code && session?.slot && session?.token) {
 } else {
   clearSession();
 }
-setInterval(() => { sendHeartbeat(); refreshRoom(); }, 5000);
+setInterval(() => { sendHeartbeat(); refreshRoom(); checkPendingJoin(); }, 5000);
 requestAnimationFrame(drawLoop);

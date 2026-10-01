@@ -13,11 +13,12 @@ import time
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
-from fastapi import FastAPI, File, Form, HTTPException, UploadFile
+from fastapi import FastAPI, File, Form, HTTPException, UploadFile, WebSocket
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
+from live import LiveHub
 from tracking import analyze_video
 
 
@@ -28,6 +29,7 @@ DATA.mkdir(parents=True, exist_ok=True)
 MAX_UPLOAD_BYTES = 500 * 1024 * 1024
 ALLOWED_EXTENSIONS = {".mp4", ".mov", ".m4v", ".webm", ".3gp"}
 ROOM_CODE = re.compile(r"^[A-F0-9]{6}$")
+JOIN_TIMEOUT = 300
 LOCK = threading.RLock()
 WORKERS = ThreadPoolExecutor(max_workers=1, thread_name_prefix="video-analysis")
 LOG = logging.getLogger(__name__)
@@ -38,6 +40,15 @@ app.mount("/static", StaticFiles(directory=WEB), name="static")
 
 class JoinRequest(BaseModel):
     token: str | None = None
+
+
+class JoinStatusRequest(BaseModel):
+    request_token: str
+
+
+class JoinApprovalRequest(BaseModel):
+    token: str
+    verification_code: str
 
 
 class HeartbeatRequest(BaseModel):
@@ -73,6 +84,12 @@ def find_device(room: dict, token: str) -> dict:
     raise HTTPException(403, "이 휴대폰의 연결 정보를 찾을 수 없습니다.")
 
 
+def pending_joins(room: dict) -> list[dict]:
+    pending = room.setdefault("pending_joins", [])
+    pending[:] = [entry for entry in pending if entry["expires_at"] > time.time()]
+    return pending
+
+
 def public_room(room: dict) -> dict:
     now = time.time()
     devices = []
@@ -91,6 +108,24 @@ def public_room(room: dict) -> dict:
             }
         )
     return {"code": room["code"], "devices": devices}
+
+
+LIVE = LiveHub(read_room, find_device)
+app.include_router(LIVE.router)
+
+
+@app.websocket("/ws/rooms/{code}/live")
+async def live_socket(websocket: WebSocket, code: str) -> None:
+    await LIVE.connect(websocket, code)
+
+
+@app.websocket("/ws/live/{live_id}")
+async def public_live_socket(websocket: WebSocket, live_id: str) -> None:
+    code = await LIVE.room_for_live_id(live_id)
+    if code is None:
+        await websocket.close(code=1008)
+        return
+    await LIVE.connect(websocket, code, viewer_only=True)
 
 
 def update_video(code: str, slot: int, **changes: object) -> None:
@@ -138,6 +173,11 @@ def index() -> FileResponse:
     return FileResponse(WEB / "index.html")
 
 
+@app.get("/live")
+def live_page() -> FileResponse:
+    return FileResponse(WEB / "live.html")
+
+
 @app.get("/api/health")
 def health() -> dict:
     return {"status": "ok"}
@@ -174,22 +214,65 @@ def join_room(code: str, request: JoinRequest) -> dict:
     with LOCK:
         room = read_room(code)
         if request.token:
-            try:
-                device = find_device(room, request.token)
-                slot = room["devices"].index(device) + 1
-                device["last_seen"] = time.time()
-                write_room(room)
-                return {"code": room["code"], "slot": slot, "token": request.token}
-            except HTTPException:
-                pass
+            device = find_device(room, request.token)
+            slot = room["devices"].index(device) + 1
+            device["last_seen"] = time.time()
+            write_room(room)
+            return {"code": room["code"], "slot": slot, "token": request.token}
         if room["devices"][1] is not None:
             raise HTTPException(409, "이미 두 대의 휴대폰이 연결되어 있습니다.")
+        pending = pending_joins(room)
+        used_codes = {entry["verification_code"] for entry in pending}
+        verification_code = ""
+        while not verification_code or verification_code in used_codes:
+            verification_code = f"{secrets.randbelow(1_000_000):06d}"
+        request_token = secrets.token_urlsafe(24)
+        pending.append({
+            "request_token": request_token,
+            "verification_code": verification_code,
+            "expires_at": time.time() + JOIN_TIMEOUT,
+        })
+        write_room(room)
+        return {"code": room["code"], "request_token": request_token,
+                "verification_code": verification_code}
+
+
+@app.post("/api/rooms/{code}/join/status")
+def join_status(code: str, request: JoinStatusRequest) -> dict:
+    with LOCK:
+        room = read_room(code)
+        pending = pending_joins(room)
+        entry = next((item for item in pending if secrets.compare_digest(
+            item["request_token"], request.request_token)), None)
+        if entry is None:
+            raise HTTPException(410, "참여 요청이 만료되었습니다. 다시 코드를 입력해 주세요.")
+        if "approved_token" in entry:
+            return {"code": room["code"], "slot": 2, "token": entry["approved_token"]}
+        if room["devices"][1] is not None:
+            raise HTTPException(409, "다른 휴대폰이 연결되었습니다. 새 촬영방을 만들어 주세요.")
+        return {"status": "pending"}
+
+
+@app.post("/api/rooms/{code}/join/approve")
+def approve_join(code: str, request: JoinApprovalRequest) -> dict:
+    with LOCK:
+        room = read_room(code)
+        if not secrets.compare_digest(room["devices"][0]["token"], request.token):
+            raise HTTPException(403, "촬영방을 만든 휴대폰에서만 승인할 수 있습니다.")
+        if room["devices"][1] is not None:
+            raise HTTPException(409, "이미 두 대의 휴대폰이 연결되어 있습니다.")
+        pending = pending_joins(room)
+        entry = next((item for item in pending if secrets.compare_digest(
+            item["verification_code"], request.verification_code)), None)
+        if entry is None:
+            raise HTTPException(400, "확인번호가 일치하지 않거나 만료되었습니다.")
         token = secrets.token_urlsafe(24)
         room["devices"][1] = {
             "token": token, "last_seen": time.time(), "recording": False, "video": None,
         }
+        entry["approved_token"] = token
         write_room(room)
-        return {"code": room["code"], "slot": 2, "token": token}
+        return public_room(room)
 
 
 @app.post("/api/rooms/{code}/heartbeat")
